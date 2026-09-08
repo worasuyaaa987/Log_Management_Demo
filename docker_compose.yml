@@ -1,0 +1,62 @@
+version: '3.8'
+
+services:
+  # 1. Storage Layer: OpenSearch
+  opensearch:
+    image: opensearchproject/opensearch:2.11.0
+    container_name: demo_opensearch
+    environment:
+      - discovery.type=single-node
+      - OPENSEARCH_INITIAL_ADMIN_PASSWORD=${OPENSEARCH_INITIAL_ADMIN_PASSWORD}
+      # จำกัด RAM ของ Java ไว้ที่ 2GB เพื่อไม่ให้แย่ง RAM ทั้งหมดของเครื่อง 8GB
+      - OPENSEARCH_JAVA_OPTS=-Xms2g -Xmx2g 
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - opensearch-data:/usr/share/opensearch/data
+    ports:
+      - "9200:9200"
+    restart: unless-stopped
+
+  # 2. Ingest Layer: Fluent Bit (สำหรับรับ Syslog)
+  fluent-bit:
+    image: fluent/fluent-bit:latest
+    container_name: demo_fluentbit
+    environment:
+      - INGEST_TOKEN=${INGEST_TOKEN:-demo_secret_token}
+    volumes:
+      - ./ingest/fluent-bit.conf:/fluent-bit/etc/fluent-bit.conf:ro
+      - ./ingest/parsers.conf:/fluent-bit/etc/parsers.conf:ro
+    ports:
+      - "514:514/tcp" # รองรับ Syslog TCP
+      - "514:514/udp" # รองรับ Syslog UDP[cite: 1]
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  # 3. Backend & API: FastAPI
+  backend:
+    build: ./backend
+    container_name: demo_backend
+    env_file: .env
+    ports:
+      - "${API_PORT}:8000"
+    depends_on:
+      - opensearch
+    restart: unless-stopped
+
+  # 4. Frontend & Web Server (Nginx + React/Vue)
+  frontend:
+    build: ./frontend
+    container_name: demo_frontend
+    ports:
+      - "80:80"   # เปิดพอร์ต HTTP[cite: 1]
+      - "443:443" # เปิดพอร์ต HTTPS[cite: 1]
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  opensearch-data:
