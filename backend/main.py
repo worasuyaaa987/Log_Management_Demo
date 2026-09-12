@@ -1,9 +1,11 @@
-from fastapi import FastAPI, Depends, HTTPException, status
+import os
+import requests
+from fastapi import FastAPI, Depends, HTTPException, status, BackgroundTasks
 from fastapi.security import OAuth2PasswordRequestForm
+from fastapi.middleware.cors import CORSMiddleware
 from typing import List, Dict, Any
 from datetime import timedelta, datetime
 import json
-from fastapi.middleware.cors import CORSMiddleware
 
 from auth import (
     authenticate_user, create_access_token, get_current_user,
@@ -38,10 +40,9 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
     )
     return {"access_token": access_token, "token_type": "bearer"}
 
-from fastapi import BackgroundTasks
 
 def check_alert_condition(log: LogEvent, db, index_name: str):
-    # Rule: 3 Failed logins from same IP in 5 minutes
+    """Rule: 3 Failed logins from same IP in 5 minutes"""
     if log.event_type in ["LogonFailed", "app_login_failed"] and log.src_ip:
         five_mins_ago = (log.timestamp - timedelta(minutes=5)).strftime("%Y-%m-%dT%H:%M:%SZ")
         query = {
@@ -59,7 +60,7 @@ def check_alert_condition(log: LogEvent, db, index_name: str):
             res = db.count(index=f"logs-{log.tenant.lower()}-*", body=query, ignore_unavailable=True)
             count = res.get('count', 0)
             if count >= 3:
-                # Trigger Alert (Store in alerts index)
+                # Store alert in dedicated index
                 alert_doc = {
                     "@timestamp": log.timestamp.strftime("%Y-%m-%dT%H:%M:%SZ"),
                     "tenant": log.tenant,
@@ -70,6 +71,15 @@ def check_alert_condition(log: LogEvent, db, index_name: str):
                 }
                 db.index(index="alerts", body=alert_doc, refresh=True)
                 print(f"[ALERT] {alert_doc['description']}")
+                
+                # Send Webhook Notification (e.g. Discord, Slack)
+                webhook_url = os.getenv("WEBHOOK_URL")
+                if webhook_url:
+                    try:
+                        payload = {"content": f"\U0001f6a8 **ALERT [High]**: {alert_doc['description']}"}
+                        requests.post(webhook_url, json=payload, timeout=5)
+                    except Exception as we:
+                        print(f"Webhook failed: {we}")
         except Exception as e:
             print(f"Alert check failed: {e}")
 
@@ -111,9 +121,9 @@ async def search_logs(tenant: str = "all", timeRange: str = "24h", current_user:
     # Construct index pattern
     index_pattern = f"logs-{tenant.lower()}-*" if tenant != "all" else "logs-*"
     
-    # Simple query for demo purposes
+    # Query with aggregations for dashboard
     query = {
-        "size": 100, # Get 100 recent logs for table
+        "size": 100,
         "sort": [{"@timestamp": {"order": "desc"}}],
         "query": {
             "bool": {

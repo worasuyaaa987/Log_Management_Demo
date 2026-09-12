@@ -4,22 +4,22 @@ A complete, production-ready Log Management solution designed for both **Applian
 
 ## 🏗 Architecture & Tech Stack
 
-- **Ingestion:** Fluent Bit (Syslog UDP/TCP) & FastAPI (HTTP POST/JSON)
+- **Ingestion:** Fluent Bit (Syslog UDP/TCP, File Batch) & FastAPI (HTTP POST/JSON)
 - **Normalization:** Pydantic Models (Backend) & Fluent Bit Parsers
 - **Storage/Search:** OpenSearch (Time-series optimized indexing)
-- **Backend API:** Python FastAPI (JWT Auth, OpenSearch bindings)
-- **Frontend UI:** Vue.js 3 + Vite, styled with modern Tailwind CSS v4
-- **Web Server / Proxy:** Nginx
-- **Infrastructure:** Docker & Docker Compose (Appliance mode)
+- **Backend API:** FastAPI (JWT Auth, Webhook integrations, OpenSearch bindings)
+- **Frontend UI:** Vue.js 3 + Vite, styled with Tailwind CSS
+- **Web Server / Proxy:** Nginx (with TLS support for SaaS)
+- **Infrastructure:** Docker & Docker Compose (Appliance & SaaS modes)
 
 ---
 
 ## ✨ Key Features Implemented
 
-1. **Multi-Source Ingestion:** Supports real Syslog via Fluent Bit and JSON REST API. Tested with 5 distinct log profiles (Firewall, API, CrowdStrike, AWS, M365).
+1. **Multi-Source Ingestion:** Supports real Syslog, JSON REST API, and File Batch ingestion. Tested with 5 distinct log profiles (Firewall, API, CrowdStrike, AWS, M365).
 2. **Unified Common Schema:** Normalizes disparate logs into a standard schema structure.
 3. **Multi-Tenant Isolation & RBAC:** Data is physically separated in OpenSearch by `tenant`. Role-Based Access Control limits viewers to their own tenant's data.
-4. **Alerting System:** Background worker detects multiple failed logins (e.g., >3 LogonFailed within 5 mins from the same IP) and registers alerts visible on the dashboard.
+4. **Alerting System & Webhooks:** Background worker detects failed logins (e.g., >3 LogonFailed within 5 mins from the same IP), registers alerts on the dashboard, and pushes notifications via external Webhooks (e.g., Discord/Slack).
 5. **Modern Dashboard:** Real-time SPA featuring timeline visualization (Chart.js), Top IP/Users/Events, and sortable recent log lists.
 6. **Log Retention (7 Days):** Automated Index State Management (ISM) script to enforce a 7-day data retention policy.
 
@@ -27,7 +27,7 @@ A complete, production-ready Log Management solution designed for both **Applian
 
 ## ⚙️ Prerequisites
 
-To run this project locally in Appliance mode, ensure you have:
+To run this project locally, ensure you have:
 - **Docker** and **Docker Compose**
 - **Python 3.8+** (for running tests and log simulation scripts)
 
@@ -51,6 +51,15 @@ start_demo.bat
 1. Copy the environment template: `cp .env.example .env`
 2. Start the infrastructure: `docker-compose up -d --build`
 3. Initialize the 7-day retention policy: `./init_retention.sh`
+
+---
+
+## ☁️ Quick Start (SaaS Mode with HTTPS)
+
+To test the SaaS deployment with TLS enabled:
+1. Generate self-signed certificates: `bash generate_certs.sh`
+2. Start the SaaS infrastructure: `docker-compose -f docker-compose.saas.yml up -d --build`
+3. Access the dashboard via **https://localhost** (accepting the self-signed warning).
 
 ---
 

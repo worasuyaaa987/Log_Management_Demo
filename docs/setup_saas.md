@@ -3,59 +3,29 @@
 This guide outlines the deployment strategy for hosting the Log Management solution in a public cloud environment (AWS, Azure, GCP) with TLS (HTTPS) enabled.
 
 ## Architecture Modifications for SaaS
-- **Load Balancer:** A cloud Load Balancer or an Nginx reverse proxy handles TLS termination.
-- **Managed Storage:** OpenSearch is replaced with AWS OpenSearch Service or Elastic Cloud for high availability.
-- **Container Orchestration:** ECS, EKS, or Cloud Run replaces Docker Compose for deploying the FastAPI backend and Vue.js frontend.
+- **Load Balancer / Nginx:** Nginx handles TLS termination locally, or you can place a cloud Load Balancer in front.
+- **Managed Storage:** OpenSearch can be replaced with AWS OpenSearch Service or Elastic Cloud for high availability.
+- **Container Orchestration:** ECS, EKS, or Cloud Run replaces Docker Compose for deploying the FastAPI backend and Vue.js frontend at scale.
 
-## Enabling TLS (Self-Signed or Let's Encrypt)
+## Enabling TLS and SaaS Mode (Local/VM)
 
-If deploying on a single Cloud VM, you can enable HTTPS via Nginx:
+We provide a dedicated `docker-compose.saas.yml` to demonstrate the SaaS mode with HTTPS securely enabled via Nginx.
 
 1. **Generate Self-Signed Certificate:**
+   Run the provided helper script to generate the certificates:
    ```bash
-   openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout server.key -out server.crt
+   # Windows (Git Bash/WSL) or Linux/macOS
+   bash generate_certs.sh
    ```
+   *This will create a `certs/` directory with `server.crt` and `server.key`.*
 
-2. **Update Nginx Configuration (`nginx.conf`):**
-   ```nginx
-   server {
-       listen 443 ssl;
-       server_name your-cloud-vm-ip-or-domain;
-
-       ssl_certificate /etc/nginx/ssl/server.crt;
-       ssl_certificate_key /etc/nginx/ssl/server.key;
-
-       location / {
-           root /usr/share/nginx/html;
-           index index.html;
-           try_files $uri $uri/ /index.html;
-       }
-
-       location /api/ {
-           proxy_pass http://backend:8000/;
-           proxy_set_header Host $host;
-           proxy_set_header X-Real-IP $remote_addr;
-           proxy_set_header X-Forwarded-Proto https;
-       }
-   }
-
-   server {
-       listen 80;
-       server_name your-cloud-vm-ip-or-domain;
-       return 301 https://$host$request_uri;
-   }
-   ```
-
-3. **Map SSL Certificates in `docker-compose.yml`:**
-   Add a volume mapping under the `frontend` service:
-   ```yaml
-     frontend:
-       volumes:
-         - ./server.crt:/etc/nginx/ssl/server.crt:ro
-         - ./server.key:/etc/nginx/ssl/server.key:ro
-   ```
-
-4. **Restart Stack:**
+2. **Start the SaaS Stack:**
+   Use the SaaS-specific compose file which mounts the custom `nginx.saas.conf` and certificates:
    ```bash
-   docker-compose up -d --build
+   docker-compose -f docker-compose.saas.yml up -d --build
    ```
+
+3. **Verify HTTPS:**
+   Navigate to **[https://localhost](https://localhost)**. 
+   *(Note: Because it is a self-signed certificate, your browser will show a security warning. You can safely proceed/accept the risk for this demonstration).*
+   All HTTP traffic on port 80 will automatically redirect to HTTPS on port 443.

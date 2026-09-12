@@ -1,0 +1,117 @@
+{
+	"info": {
+		"_postman_id": "71360155-b0d7-463d-8ab1-b51e06d917f8",
+		"name": "Log Management API",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "1. Login (Get Token)",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "urlencoded",
+					"urlencoded": [
+						{
+							"key": "username",
+							"value": "admin",
+							"type": "text"
+						},
+						{
+							"key": "password",
+							"value": "admin123",
+							"type": "text"
+						}
+					]
+				},
+				"url": {
+					"raw": "http://localhost/token",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"path": [
+						"token"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "2. Ingest Log (JSON)",
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "YOUR_ACCESS_TOKEN_HERE",
+							"type": "string"
+						}
+					]
+				},
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"timestamp\": \"2026-09-09T20:00:00Z\",\n  \"tenant\": \"demoA\",\n  \"source\": \"Postman\",\n  \"event_type\": \"API_Test\",\n  \"user\": \"admin\",\n  \"src_ip\": \"127.0.0.1\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost/ingest",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"path": [
+						"ingest"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "3. Search Logs",
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "YOUR_ACCESS_TOKEN_HERE",
+							"type": "string"
+						}
+					]
+				},
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost/search?timeRange=24h&tenant=demoA",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"path": [
+						"search"
+					],
+					"query": [
+						{
+							"key": "timeRange",
+							"value": "24h"
+						},
+						{
+							"key": "tenant",
+							"value": "demoA"
+						}
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}

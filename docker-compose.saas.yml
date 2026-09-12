@@ -4,11 +4,10 @@ services:
   # 1. Storage Layer: OpenSearch
   opensearch:
     image: opensearchproject/opensearch:2.11.0
-    container_name: demo_opensearch
+    container_name: demo_opensearch_saas
     environment:
       - discovery.type=single-node
       - OPENSEARCH_INITIAL_ADMIN_PASSWORD=${OPENSEARCH_INITIAL_ADMIN_PASSWORD}
-      # จำกัด RAM ของ Java ไว้ที่ 2GB เพื่อไม่ให้แย่ง RAM ทั้งหมดของเครื่อง 8GB
       - OPENSEARCH_JAVA_OPTS=-Xms2g -Xmx2g 
     ulimits:
       memlock:
@@ -20,18 +19,19 @@ services:
       - "9200:9200"
     restart: unless-stopped
 
-  # 2. Ingest Layer: Fluent Bit (สำหรับรับ Syslog)
+  # 2. Ingest Layer: Fluent Bit (Syslog + Batch File)
   fluent-bit:
     image: fluent/fluent-bit:latest
-    container_name: demo_fluentbit
+    container_name: demo_fluentbit_saas
     environment:
       - INGEST_TOKEN=${INGEST_TOKEN:-demo_secret_token}
     volumes:
       - ./ingest/fluent-bit.conf:/fluent-bit/etc/fluent-bit.conf:ro
       - ./ingest/parsers.conf:/fluent-bit/etc/parsers.conf:ro
+      - ./batch_logs:/fluent-bit/etc/logs:ro  # Mount for batch file ingestion
     ports:
-      - "514:514/tcp" # รองรับ Syslog TCP
-      - "514:514/udp" # รองรับ Syslog UDP[cite: 1]
+      - "514:514/tcp"
+      - "514:514/udp"
     depends_on:
       - backend
     restart: unless-stopped
@@ -39,7 +39,7 @@ services:
   # 3. Backend & API: FastAPI
   backend:
     build: ./backend
-    container_name: demo_backend
+    container_name: demo_backend_saas
     env_file: .env
     ports:
       - "${API_PORT}:8000"
@@ -47,13 +47,17 @@ services:
       - opensearch
     restart: unless-stopped
 
-  # 4. Frontend & Web Server (Nginx + React/Vue)
+  # 4. Frontend & Web Server (Nginx with TLS)
   frontend:
     build: ./frontend
-    container_name: demo_frontend
+    container_name: demo_frontend_saas
     ports:
-      - "80:80"   # เปิดพอร์ต HTTP[cite: 1]
-      - "443:443" # เปิดพอร์ต HTTPS[cite: 1]
+      - "80:80"   # Open HTTP for redirect
+      - "443:443" # Open HTTPS
+    volumes:
+      - ./frontend/nginx.saas.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./certs/server.crt:/etc/nginx/ssl/server.crt:ro
+      - ./certs/server.key:/etc/nginx/ssl/server.key:ro
     depends_on:
       - backend
     restart: unless-stopped

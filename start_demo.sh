@@ -17,9 +17,11 @@ fi
 echo ""
 echo "[2/4] Checking .env configuration..."
 if [ ! -f .env ]; then
-    if [ -f env.local ]; then
-        echo "📄 Copying env.local to .env..."
-        cp env.local .env
+    if [ -f .env.example ]; then
+        echo "📄 Copying .env.example to .env..."
+        cp .env.example .env
+    else
+        echo "⚠️  No .env or .env.example found. Please create one."
     fi
 else
     echo "✅ .env file already exists."

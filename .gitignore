@@ -56,3 +56,11 @@ logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# SaaS / SSL Certificates
+certs/
+*.crt
+*.key
+
+# Assignment Requirements (Do not track)
+FullStack_Developer_Intern_Assignment_*.pdf
