@@ -7,7 +7,7 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from typing import List, Dict, Any
-from datetime import timedelta, datetime
+from datetime import timedelta, datetime, timezone
 import json
 import redis
 import asyncio
@@ -216,7 +216,8 @@ async def search_logs(tenant: str = "all", timeRange: str = "24h", current_user:
                 "date_histogram": {
                     "field": "@timestamp",
                     "fixed_interval": "1h" if timeRange == "24h" else "1d",
-                    "min_doc_count": 0
+                    "min_doc_count": 0,
+                    "time_zone": "+07:00"
                 }
             },
             "active_tenants": {
@@ -251,7 +252,7 @@ async def search_logs(tenant: str = "all", timeRange: str = "24h", current_user:
         timeline = []
         if 'timeline' in res['aggregations']:
             for bucket in res['aggregations']['timeline']['buckets']:
-                dt = datetime.fromtimestamp(bucket['key'] / 1000.0)
+                dt = datetime.fromtimestamp(bucket['key'] / 1000.0, tz=timezone.utc).astimezone(timezone(timedelta(hours=7)))
                 time_str = dt.strftime("%H:00") if timeRange == "24h" else dt.strftime("%Y-%m-%d")
                 timeline.append({"time": time_str, "count": bucket['doc_count']})
                 
