@@ -41,9 +41,9 @@ To run this project locally, ensure you have:
 
 We have provided automated scripts to configure the environment, boot the containers, and ingest sample logs.
 
-**For Windows:**
+**For Windows (PowerShell or CMD):**
 ```cmd
-start_demo.bat
+.\start_demo.bat
 ```
 
 **For Linux / macOS:**
