@@ -1,11 +1,17 @@
 import os
 import requests
-from fastapi import FastAPI, Depends, HTTPException, status, BackgroundTasks
+from fastapi import FastAPI, Depends, HTTPException, status, BackgroundTasks, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 from typing import List, Dict, Any
 from datetime import timedelta, datetime
 import json
+import redis
+import asyncio
+from opensearchpy import helpers
 
 from auth import (
     authenticate_user, create_access_token, get_current_user,
@@ -14,7 +20,10 @@ from auth import (
 from models import LogEvent
 from database import get_db
 
+limiter = Limiter(key_func=get_remote_address)
 app = FastAPI(title="Demo Log Management API")
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 app.add_middleware(
     CORSMiddleware,
@@ -23,6 +32,69 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+redis_host = os.getenv("REDIS_HOST", "redis")
+redis_port = int(os.getenv("REDIS_PORT", 6379))
+redis_client = redis.Redis(host=redis_host, port=redis_port, db=0, decode_responses=True)
+
+geo_cache = {}
+
+def get_geo_info(ip: str) -> str:
+    if not ip: return "Unknown"
+    if ip in geo_cache: return geo_cache[ip]
+    if ip.startswith("192.168.") or ip.startswith("10.") or ip == "127.0.0.1":
+        return "Internal"
+    
+    try:
+        # Simple enrichment API (ip-api is free for 45 req/min)
+        res = requests.get(f"http://ip-api.com/json/{ip}", timeout=2).json()
+        if res.get("status") == "success":
+            country = res.get("country", "Unknown")
+            geo_cache[ip] = country
+            return country
+    except Exception:
+        pass
+    return "Unknown"
+
+async def redis_worker():
+    db = get_db()
+    while True:
+        try:
+            pipe = redis_client.pipeline()
+            pipe.lrange("logs_queue", 0, 499)
+            pipe.ltrim("logs_queue", 500, -1)
+            results = pipe.execute()
+            
+            logs = results[0]
+            if logs:
+                actions = []
+                for log_json in logs:
+                    log_data = json.loads(log_json)
+                    index_name = log_data.pop("_index_name", "logs-all-default")
+                    
+                    # Enrichment step
+                    src_ip = log_data.get("src_ip")
+                    if src_ip:
+                        log_data["country"] = get_geo_info(src_ip)
+                        
+                    action = {
+                        "_index": index_name,
+                        "_source": log_data
+                    }
+                    actions.append(action)
+                
+                if actions:
+                    helpers.bulk(db, actions)
+                    print(f"Bulk inserted {len(actions)} logs from Redis queue")
+                    
+            await asyncio.sleep(2)
+        except Exception as e:
+            print(f"Redis worker error: {e}")
+            await asyncio.sleep(5)
+
+@app.on_event("startup")
+async def startup_event():
+    asyncio.create_task(redis_worker())
 
 @app.post("/token", response_model=Token)
 async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
@@ -84,7 +156,8 @@ def check_alert_condition(log: LogEvent, db, index_name: str):
             print(f"Alert check failed: {e}")
 
 @app.post("/ingest", status_code=status.HTTP_201_CREATED)
-async def ingest_log(log: LogEvent, background_tasks: BackgroundTasks, current_user: User = Depends(get_current_user), db=Depends(get_db)):
+@limiter.limit("100/minute")
+async def ingest_log(request: Request, log: LogEvent, background_tasks: BackgroundTasks, current_user: User = Depends(get_current_user), db=Depends(get_db)):
     # 1. Tenant Isolation Check (AuthZ)
     if current_user.tenant != "all" and current_user.tenant != log.tenant:
         raise HTTPException(status_code=403, detail="Not authorized to ingest for this tenant")
@@ -96,20 +169,18 @@ async def ingest_log(log: LogEvent, background_tasks: BackgroundTasks, current_u
     # Format: logs-{tenant}-{YYYY.MM.DD}
     date_str = log.timestamp.strftime("%Y.%m.%d")
     index_name = f"logs-{log.tenant.lower()}-{date_str}"
+    log_dict["_index_name"] = index_name
     
     try:
-        response = db.index(
-            index=index_name,
-            body=log_dict,
-            refresh=True # Force refresh for immediate visibility in demo
-        )
+        # Push to Redis Queue instead of direct OpenSearch indexing
+        redis_client.lpush("logs_queue", json.dumps(log_dict))
         
         # 4. Trigger Alerting Check in background
         background_tasks.add_task(check_alert_condition, log, db, index_name)
         
-        return {"status": "success", "id": response["_id"], "index": index_name}
+        return {"status": "success", "message": "Log queued for ingestion"}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"OpenSearch indexing failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to queue log: {str(e)}")
 
 @app.get("/search")
 async def search_logs(tenant: str = "all", timeRange: str = "24h", current_user: User = Depends(get_current_user), db=Depends(get_db)):

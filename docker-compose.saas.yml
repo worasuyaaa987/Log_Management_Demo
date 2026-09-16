@@ -3,7 +3,7 @@ version: '3.8'
 services:
   # 1. Storage Layer: OpenSearch
   opensearch:
-    image: opensearchproject/opensearch:2.11.0
+    image: opensearchproject/opensearch:2.12.0
     container_name: demo_opensearch_saas
     environment:
       - discovery.type=single-node
@@ -36,7 +36,15 @@ services:
       - backend
     restart: unless-stopped
 
-  # 3. Backend & API: FastAPI
+  # 3. Message Queue: Redis
+  redis:
+    image: redis:alpine
+    container_name: demo_redis_saas
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+
+  # 4. Backend & API: FastAPI
   backend:
     build: ./backend
     container_name: demo_backend_saas
@@ -45,6 +53,7 @@ services:
       - "${API_PORT}:8000"
     depends_on:
       - opensearch
+      - redis
     restart: unless-stopped
 
   # 4. Frontend & Web Server (Nginx with TLS)

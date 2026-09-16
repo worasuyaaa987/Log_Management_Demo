@@ -3,7 +3,8 @@
 # Script to configure 7-day retention policy in OpenSearch via ISM (Index State Management)
 
 OPENSEARCH_URL=${OPENSEARCH_URL:-"https://localhost:9200"}
-AUTH="admin:admin"
+ADMIN_PASS=${OPENSEARCH_INITIAL_ADMIN_PASSWORD:-"admin"}
+AUTH="admin:${ADMIN_PASS}"
 
 echo "Waiting for OpenSearch to be available..."
 until curl -k -s -u $AUTH $OPENSEARCH_URL | grep -q '"tagline" : "The OpenSearch Project: https://opensearch.org/"'; do

@@ -5,9 +5,10 @@ A complete, production-ready Log Management solution designed for both **Applian
 ## 🏗 Architecture & Tech Stack
 
 - **Ingestion:** Fluent Bit (Syslog UDP/TCP, File Batch) & FastAPI (HTTP POST/JSON)
+- **Message Queue:** Redis (Buffers logs to prevent OpenSearch bottlenecks)
 - **Normalization:** Pydantic Models (Backend) & Fluent Bit Parsers
 - **Storage/Search:** OpenSearch (Time-series optimized indexing)
-- **Backend API:** FastAPI (JWT Auth, Webhook integrations, OpenSearch bindings)
+- **Backend API:** FastAPI (JWT Auth, Webhooks, Rate Limiting, OpenSearch bindings)
 - **Frontend UI:** Vue.js 3 + Vite, styled with Tailwind CSS
 - **Web Server / Proxy:** Nginx (with TLS support for SaaS)
 - **Infrastructure:** Docker & Docker Compose (Appliance & SaaS modes)
@@ -19,9 +20,12 @@ A complete, production-ready Log Management solution designed for both **Applian
 1. **Multi-Source Ingestion:** Supports real Syslog, JSON REST API, and File Batch ingestion. Tested with 5 distinct log profiles (Firewall, API, CrowdStrike, AWS, M365).
 2. **Unified Common Schema:** Normalizes disparate logs into a standard schema structure.
 3. **Multi-Tenant Isolation & RBAC:** Data is physically separated in OpenSearch by `tenant`. Role-Based Access Control limits viewers to their own tenant's data.
-4. **Alerting System & Webhooks:** Background worker detects failed logins (e.g., >3 LogonFailed within 5 mins from the same IP), registers alerts on the dashboard, and pushes notifications via external Webhooks (e.g., Discord/Slack).
-5. **Modern Dashboard:** Real-time SPA featuring timeline visualization (Chart.js), Top IP/Users/Events, and sortable recent log lists.
-6. **Log Retention (7 Days):** Automated Index State Management (ISM) script to enforce a 7-day data retention policy.
+4. **Alerting System & Webhooks:** Background worker detects failed logins, registers alerts on the dashboard, and pushes notifications via external Webhooks (e.g., Discord/Slack).
+5. **DDoS Protection & Queueing:** Implements API Rate Limiting (100 req/min) via `slowapi` and uses **Redis** as a Message Queue to buffer high-volume log ingestion.
+6. **GeoIP Enrichment:** Automatically enriches incoming logs with GeoIP lookup (country mapping) during the worker ingestion phase using `ip-api` with in-memory caching.
+7. **Modern Dashboard:** Real-time SPA featuring timeline visualization (Chart.js), Top IP/Users/Events, and sortable recent log lists.
+8. **Log Retention (7 Days):** Automated Index State Management (ISM) script to enforce a 7-day data retention policy.
+9. **CI/CD Pipeline:** Fully configured GitHub Actions workflow (`.github/workflows/test.yml`) for automated pytest validation on push.
 
 ---
 

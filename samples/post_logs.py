@@ -29,7 +29,7 @@ def generate_sample_logs():
             "source": "api",
             "event_type": "app_login_failed",
             "user": "alice",
-            "ip": f"203.0.113.{random.randint(1, 254)}",
+            "src_ip": f"203.0.113.{random.randint(1, 254)}",
             "reason": "wrong_password",
             "@timestamp": now
         },
@@ -56,6 +56,7 @@ def generate_sample_logs():
             },
             "event_type": "CreateUser",
             "user": "admin",
+            "src_ip": f"54.169.2.{random.randint(1, 254)}",
             "@timestamp": now,
             "raw": {"eventName": "CreateUser", "requestParameters": {"userName": "temp-user"}}
         },
@@ -65,7 +66,7 @@ def generate_sample_logs():
             "source": "m365",
             "event_type": "UserLoggedIn",
             "user": "bob@demo.local",
-            "ip": f"198.51.100.{random.randint(1, 254)}",
+            "src_ip": f"198.51.100.{random.randint(1, 254)}",
             "status": "Success",
             "workload": "Exchange",
             "@timestamp": now
@@ -78,7 +79,7 @@ def generate_sample_logs():
             "event_type": "LogonFailed",
             "user": "demo\\eve",
             "host": "DC01",
-            "ip": f"203.0.113.{random.randint(1, 254)}",
+            "src_ip": f"203.0.113.{random.randint(1, 254)}",
             "logon_type": 3,
             "@timestamp": now
         }
@@ -93,7 +94,6 @@ def send_logs(logs):
             # We use HTTP POST directly to the FastAPI /ingest endpoint
             response = requests.post(API_URL, headers=HEADERS, json=log)
             if response.status_code in [200, 201, 202]:
-                print(f"[SUCCESS] Sent {log['source']} log. Backend responded with {response.status_code}")
                 success_count += 1
             else:
                 print(f"[ERROR] Failed to send log. Status code: {response.status_code}, Response: {response.text}")
@@ -102,7 +102,7 @@ def send_logs(logs):
             return False
         
         # Small delay between events for realism
-        time.sleep(0.1)
+        time.sleep(0.05)
     
     return success_count > 0
 
@@ -111,13 +111,14 @@ if __name__ == "__main__":
     print(f"Targeting API: {API_URL}")
     print("-" * 50)
     
-    # Run a quick batch of logs
-    logs_to_send = generate_sample_logs()
-    
-    # Randomize the order
-    random.shuffle(logs_to_send)
-    
-    print(f"Sending batch of {len(logs_to_send)} logs...")
-    send_logs(logs_to_send)
+    total_sent = 0
+    # Loop 10 times to send 50 logs total
+    for i in range(10):
+        logs_to_send = generate_sample_logs()
+        random.shuffle(logs_to_send)
+        if send_logs(logs_to_send):
+            total_sent += len(logs_to_send)
+            print(f"Batch {i+1}/10 sent successfully.")
+            
     print("-" * 50)
-    print("Simulation complete. Check your frontend dashboard to see the ingested logs!")
+    print(f"Simulation complete. {total_sent} logs sent. Check your frontend dashboard!")
