@@ -252,7 +252,7 @@ async def search_logs(tenant: str = "all", timeRange: str = "24h", current_user:
         if 'timeline' in res['aggregations']:
             for bucket in res['aggregations']['timeline']['buckets']:
                 dt = datetime.fromtimestamp(bucket['key'] / 1000.0)
-                time_str = dt.strftime("%H:%00") if timeRange == "24h" else dt.strftime("%Y-%m-%d")
+                time_str = dt.strftime("%H:00") if timeRange == "24h" else dt.strftime("%Y-%m-%d")
                 timeline.append({"time": time_str, "count": bucket['doc_count']})
                 
         # Parse top terms
