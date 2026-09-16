@@ -163,7 +163,8 @@ async def ingest_log(request: Request, log: LogEvent, background_tasks: Backgrou
         raise HTTPException(status_code=403, detail="Not authorized to ingest for this tenant")
     
     # 2. Extract Data
-    log_dict = log.model_dump(by_alias=True, exclude_none=True)
+    log_json_str = log.model_dump_json(by_alias=True, exclude_none=True)
+    log_dict = json.loads(log_json_str)
     
     # 3. Time-based & Tenant-based Index Routing
     # Format: logs-{tenant}-{YYYY.MM.DD}
