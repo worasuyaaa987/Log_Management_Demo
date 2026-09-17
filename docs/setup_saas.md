@@ -176,6 +176,7 @@ Expected output (all should show **Up**):
 ```
 NAME                    STATUS
 demo_opensearch_saas    Up      0.0.0.0:9200->9200/tcp
+demo_redis_saas         Up      0.0.0.0:6379->6379/tcp
 demo_backend_saas       Up      0.0.0.0:8000->8000/tcp
 demo_fluentbit_saas     Up      0.0.0.0:514->514/tcp, 514/udp
 demo_frontend_saas      Up      0.0.0.0:80->80/tcp, 443/tcp

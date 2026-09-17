@@ -32,7 +32,7 @@ This mode runs the entire Log Management stack on a single server or Virtual Mac
 
 4. **Verify Deployment**
    - Check container status: `docker-compose ps`
-   - All 4 containers (`opensearch`, `backend`, `frontend`, `fluentbit`) should be running.
+   - All 5 containers (`opensearch`, `redis`, `backend`, `frontend`, `fluentbit`) should be running.
 
 5. **Access the System**
    - **Dashboard UI:** Open a web browser to `http://<your-server-ip>`
@@ -42,4 +42,16 @@ This mode runs the entire Log Management stack on a single server or Virtual Mac
    Run the sample script to populate the dashboard:
    ```bash
    python samples/post_logs.py
+   ```
+
+7. **Initialize Retention Policy**
+   Apply the 7-day automatic log deletion policy:
+   ```bash
+   bash init_retention.sh
+   ```
+
+8. **Test Alerting (Optional)**
+   Trigger a Brute Force Attack alert to verify the alerting system:
+   ```bash
+   python samples/trigger_alert.py
    ```

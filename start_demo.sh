@@ -6,7 +6,7 @@ echo "==================================================="
 # 1. Sysctl for OpenSearch (Linux only)
 if [ "$(uname)" == "Linux" ]; then
     echo ""
-    echo "[1/4] Checking vm.max_map_count for OpenSearch..."
+    echo "[1/5] Checking vm.max_map_count for OpenSearch..."
     if [ "$EUID" -ne 0 ]; then
         echo "⚠️  Please run as root (sudo ./start_demo.sh) to configure vm.max_map_count on Linux."
     else
@@ -15,7 +15,7 @@ if [ "$(uname)" == "Linux" ]; then
 fi
 
 echo ""
-echo "[2/4] Checking .env configuration..."
+echo "[2/5] Checking .env configuration..."
 if [ ! -f .env ]; then
     if [ -f .env.example ]; then
         echo "📄 Copying .env.example to .env..."
@@ -28,7 +28,7 @@ else
 fi
 
 echo ""
-echo "[3/4] Starting Docker containers..."
+echo "[3/5] Starting Docker containers..."
 echo "🐳 Running docker-compose up -d --build..."
 docker-compose up -d --build
 
@@ -37,7 +37,11 @@ echo "⏳ Waiting for services to initialize (15 seconds)..."
 sleep 15
 
 echo ""
-echo "[4/4] Running Python Ingestion Simulator..."
+echo "[4/5] Initializing Retention Policy..."
+bash init_retention.sh
+
+echo ""
+echo "[5/5] Running Python Ingestion Simulator..."
 echo "📦 Installing required Python library (requests)..."
 pip install requests > /dev/null 2>&1
 

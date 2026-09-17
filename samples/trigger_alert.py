@@ -12,7 +12,7 @@ def send_alert_logs():
     print("🚨 Triggering Brute Force Alert (3 Failed Logins)...")
     
     # We use a static IP to ensure the rule triggers!
-    attacker_ip = "192.168.99.99"
+    attacker_ip = "203.0.113.66"
     
     for i in range(3):
         now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")

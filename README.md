@@ -110,3 +110,15 @@ pip install -r backend/requirements.txt
 pip install pytest
 pytest tests/
 ```
+
+---
+
+## 🛠 Troubleshooting
+
+**1. OpenSearch container exits immediately (code 78)**
+OpenSearch requires the host's virtual memory to be increased. 
+- **Linux:** Run `sudo sysctl -w vm.max_map_count=262144` (handled automatically by `start_demo.sh`).
+- **Windows / Docker Desktop:** Usually handled automatically by the WSL2 backend. If it still fails, you may need to configure `.wslconfig` to increase memory limits.
+
+**2. Missing Retention Policy on Windows**
+If you run `start_demo.bat`, the 7-day retention policy (`init_retention.sh`) is not automatically applied because Windows CMD cannot natively run bash scripts. To apply it, open Git Bash or WSL and run `bash init_retention.sh` manually.
