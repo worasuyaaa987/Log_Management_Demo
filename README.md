@@ -81,12 +81,13 @@ You can log in using the following demonstration accounts:
 
 We provide a Python simulator script that mimics 5 different data sources and pushes them directly to the backend API.
 
+To simulate log ingestion, open another terminal and run:
 ```bash
-# Install requests if you haven't already
-pip install requests
-
-# Run the simulation script
+# Push 50 random logs to the system
 python samples/post_logs.py
+
+# Trigger a Brute Force Attack alert (3 failed logins from same IP)
+python samples/trigger_alert.py
 ```
 *After running, return to the Dashboard and click **Refresh** to see the new data and potential alerts.*
 
