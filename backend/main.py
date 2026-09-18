@@ -184,7 +184,7 @@ async def ingest_log(request: Request, log: LogEvent, background_tasks: Backgrou
         raise HTTPException(status_code=500, detail=f"Failed to queue log: {str(e)}")
 
 @app.get("/search")
-async def search_logs(tenant: str = "all", timeRange: str = "24h", current_user: User = Depends(get_current_user), db=Depends(get_db)):
+async def search_logs(tenant: str = "all", timeRange: str = "24h", q: str = "", eventType: str = "", current_user: User = Depends(get_current_user), db=Depends(get_db)):
     # 1. Tenant Isolation Check (AuthZ)
     if current_user.tenant != "all":
         # Force tenant filter to current_user's tenant
@@ -193,13 +193,30 @@ async def search_logs(tenant: str = "all", timeRange: str = "24h", current_user:
     # Construct index pattern
     index_pattern = f"logs-{tenant.lower()}-*" if tenant != "all" else "logs-*"
     
+    query_must = []
+    
+    if q:
+        query_must.append({
+            "multi_match": {
+                "query": q,
+                "fields": ["*"]
+            }
+        })
+        
+    if eventType:
+        query_must.append({
+            "term": {
+                "event_type.keyword": eventType
+            }
+        })
+
     # Query with aggregations for dashboard
     query = {
         "size": 100,
         "sort": [{"@timestamp": {"order": "desc"}}],
         "query": {
             "bool": {
-                "must": []
+                "must": query_must
             }
         },
         "aggs": {

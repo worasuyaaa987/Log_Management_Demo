@@ -8,6 +8,11 @@
         </div>
       </div>
       <div class="flex items-center space-x-4">
+        <input v-model="searchQuery" @keyup.enter="fetchData" type="text" placeholder="Search logs..." class="bg-gray-800 border border-gray-700 text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 w-64" />
+        <select v-model="selectedEventType" @change="fetchData" class="bg-gray-800 border border-gray-700 text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 max-w-[200px]">
+          <option value="">All Events</option>
+          <option v-for="item in dashboardData.top_events" :key="item.key" :value="item.key">{{ item.key }}</option>
+        </select>
         <select v-model="timeRange" @change="fetchData" class="bg-gray-800 border border-gray-700 text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5">
           <option value="24h">Last 24 Hours</option>
           <option value="7d">Last 7 Days</option>
@@ -177,12 +182,14 @@ ChartJS.register(
 
 const router = useRouter()
 const timeRange = ref('24h')
+const searchQuery = ref('')
+const selectedEventType = ref('')
 const dashboardData = ref({})
 
 // Fetch data
 const fetchData = async () => {
   try {
-    const res = await api.get(`/search?timeRange=${timeRange.value}`)
+    const res = await api.get(`/search?timeRange=${timeRange.value}&q=${encodeURIComponent(searchQuery.value)}&eventType=${encodeURIComponent(selectedEventType.value)}`)
     dashboardData.value = res.data
   } catch (error) {
     if (error.response?.status === 401) {
