@@ -173,10 +173,15 @@ async def ingest_log(request: Request, log: LogEvent, background_tasks: Backgrou
     log_dict["_index_name"] = index_name
     
     try:
-        # Push to Redis Queue instead of direct OpenSearch indexing
-        redis_client.lpush("logs_queue", json.dumps(log_dict))
+        # 4. Security Events Fast-Lane (Bypass Queue for instant alerting)
+        if log.event_type in ["LogonFailed", "app_login_failed"]:
+            action = {"_index": index_name, "_source": log_dict}
+            helpers.bulk(db, [action], refresh=True)
+        else:
+            # Push normal logs to Redis Queue
+            redis_client.lpush("logs_queue", json.dumps(log_dict))
         
-        # 4. Trigger Alerting Check in background
+        # 5. Trigger Alerting Check in background
         background_tasks.add_task(check_alert_condition, log, db, index_name)
         
         return {"status": "success", "message": "Log queued for ingestion"}
