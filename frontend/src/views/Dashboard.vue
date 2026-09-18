@@ -120,6 +120,7 @@
                 <th scope="col" class="px-6 py-3">Event Type</th>
                 <th scope="col" class="px-6 py-3">User</th>
                 <th scope="col" class="px-6 py-3">Src IP</th>
+                <th scope="col" class="px-6 py-3">Country</th>
               </tr>
             </thead>
             <tbody>
@@ -130,9 +131,10 @@
                 <td class="px-6 py-4 text-blue-300">{{ log.event_type }}</td>
                 <td class="px-6 py-4">{{ log.user }}</td>
                 <td class="px-6 py-4 font-mono">{{ log.src_ip }}</td>
+                <td class="px-6 py-4 font-mono text-xs text-teal-400">{{ log.country && log.country !== 'Unknown' ? log.country : '-' }}</td>
               </tr>
               <tr v-if="!dashboardData.logs?.length">
-                <td colspan="6" class="px-6 py-8 text-center text-gray-500">No logs found in this time range. Try running the simulation script.</td>
+                <td colspan="7" class="px-6 py-8 text-center text-gray-500">No logs found in this time range. Try running the simulation script.</td>
               </tr>
             </tbody>
           </table>

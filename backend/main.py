@@ -281,7 +281,8 @@ async def search_logs(tenant: str = "all", timeRange: str = "24h", current_user:
                 "event_type": src.get('event_type'),
                 "user": src.get('user', '-'),
                 "src_ip": src.get('src_ip', '-'),
-                "dst_ip": src.get('dst_ip', '-')
+                "dst_ip": src.get('dst_ip', '-'),
+                "country": src.get('country', '-')
             })
             
         return {
