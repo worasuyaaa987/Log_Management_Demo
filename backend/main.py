@@ -175,6 +175,8 @@ async def ingest_log(request: Request, log: LogEvent, background_tasks: Backgrou
     try:
         # 4. Security Events Fast-Lane (Bypass Queue for instant alerting)
         if log.event_type in ["LogonFailed", "app_login_failed"]:
+            if log.src_ip:
+                log_dict["country"] = get_geo_info(log.src_ip)
             action = {"_index": index_name, "_source": log_dict}
             helpers.bulk(db, [action], refresh=True)
         else:
@@ -244,6 +246,9 @@ async def search_logs(tenant: str = "all", timeRange: str = "24h", q: str = "", 
             },
             "active_tenants": {
                 "cardinality": {"field": "tenant.keyword"}
+            },
+            "tenant_list": {
+                "terms": { "field": "tenant.keyword", "size": 100 }
             }
         }
     }
@@ -290,6 +295,7 @@ async def search_logs(tenant: str = "all", timeRange: str = "24h", q: str = "", 
         top_ips = parse_top('top_ips')
         top_users = parse_top('top_users')
         top_events = parse_top('top_events')
+        tenant_list = parse_top('tenant_list')
         
         # Parse recent logs
         logs = []
@@ -310,6 +316,7 @@ async def search_logs(tenant: str = "all", timeRange: str = "24h", q: str = "", 
         return {
             "total": total_logs,
             "active_tenants": res['aggregations'].get('active_tenants', {}).get('value', 0) if tenant == "all" else 1,
+            "tenant_list": tenant_list,
             "alerts_count": alerts_count,
             "alert_messages": alerts,
             "timeline": timeline,

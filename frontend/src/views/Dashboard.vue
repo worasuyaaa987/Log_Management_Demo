@@ -13,6 +13,10 @@
           <option value="">All Events</option>
           <option v-for="item in dashboardData.top_events" :key="item.key" :value="item.key">{{ item.key }}</option>
         </select>
+        <select v-if="dashboardData.tenant_list && dashboardData.tenant_list.length > 0" v-model="selectedTenant" @change="fetchData" class="bg-gray-800 border border-gray-700 text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5">
+          <option value="all">All Tenants</option>
+          <option v-for="item in dashboardData.tenant_list" :key="item.key" :value="item.key">{{ item.key }}</option>
+        </select>
         <select v-model="timeRange" @change="fetchData" class="bg-gray-800 border border-gray-700 text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5">
           <option value="24h">Last 24 Hours</option>
           <option value="7d">Last 7 Days</option>
@@ -184,12 +188,13 @@ const router = useRouter()
 const timeRange = ref('24h')
 const searchQuery = ref('')
 const selectedEventType = ref('')
+const selectedTenant = ref('all')
 const dashboardData = ref({})
 
 // Fetch data
 const fetchData = async () => {
   try {
-    const res = await api.get(`/search?timeRange=${timeRange.value}&q=${encodeURIComponent(searchQuery.value)}&eventType=${encodeURIComponent(selectedEventType.value)}`)
+    const res = await api.get(`/search?tenant=${encodeURIComponent(selectedTenant.value)}&timeRange=${timeRange.value}&q=${encodeURIComponent(searchQuery.value)}&eventType=${encodeURIComponent(selectedEventType.value)}`)
     dashboardData.value = res.data
   } catch (error) {
     if (error.response?.status === 401) {

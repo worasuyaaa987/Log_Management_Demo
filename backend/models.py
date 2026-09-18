@@ -28,4 +28,5 @@ class LogEvent(BaseModel):
     rule_name: Optional[str] = None
     rule_id: Optional[str] = None
     raw: Optional[Any] = None
+    country: Optional[str] = None
     tags: Optional[List[str]] = Field(default=None, alias="_tags")
