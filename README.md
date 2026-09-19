@@ -13,6 +13,21 @@ A complete, production-ready Log Management solution designed for both **Applian
 - **Web Server / Proxy:** Nginx (with TLS support for SaaS)
 - **Infrastructure:** Docker & Docker Compose (Appliance & SaaS modes)
 
+### Data Flow Overview
+```mermaid
+graph LR
+    Syslog["Syslog<br/>(TCP/UDP :514)"] --> FB["Fluent Bit"]
+    Batch["Batch Files"] --> FB
+    FB -- "HTTP POST<br/>(direct)" --> API["FastAPI<br/>Backend"]
+    ExtClients["External Clients"] --> Nginx["Nginx"]
+    Nginx -- "proxy_pass" --> API
+    Nginx -- "static files" --> Vue["Vue.js 3<br/>Dashboard"]
+    API -- "normal logs" --> Redis["Redis<br/>(Queue)"]
+    API -. "security events<br/>(fast-lane)" .-> OS["OpenSearch"]
+    Redis --> Worker["Background<br/>Worker"] --> OS
+    API -- "alerts" --> Webhook["Webhook"]
+```
+
 ---
 
 ## ✨ Key Features Implemented
@@ -72,8 +87,12 @@ To test the SaaS deployment with TLS enabled:
 Once the containers are running, navigate to: **[http://localhost](http://localhost)**
 
 You can log in using the following demonstration accounts:
-- **Super Admin:** `admin` / `admin123` *(Has access to view all tenants' logs)*
-- **Tenant Viewer:** `viewerA` / `viewer123` *(Has access to view ONLY `demoA` logs)*
+
+| Username | Password | Role | Tenant Access |
+|----------|----------|------|---------------|
+| `admin` | `admin123` | Super Admin | All tenants |
+| `viewerA` | `viewer123` | Tenant Viewer | `demoA` only |
+| `viewerB` | `viewer123` | Tenant Viewer | `demoB` only |
 
 ---
 

@@ -69,3 +69,10 @@ certs/
 
 # Assignment Requirements (Do not track)
 FullStack_Developer_Intern_Assignment_*.pdf
+FullStack_Develop*
+*.png.tmp
+presentation_script*.md
+
+# OS-generated files
+Thumbs.db
+Desktop.ini

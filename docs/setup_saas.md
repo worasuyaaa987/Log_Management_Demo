@@ -3,8 +3,8 @@
 This guide outlines the deployment strategy for hosting the Log Management solution in a public cloud environment (AWS, Azure, GCP) with TLS (HTTPS) enabled.
 
 ## Pre-Production Architecture Modifications (SaaS Mode)
-- **Message Queue (Redis):** Buffers incoming logs to prevent API/OpenSearch bottlenecks (Rate Limiting + Queueing).
-- **Enrichment Engine:** Background workers automatically enrich incoming IP addresses with GeoIP mapping before ingestion.
+- **Message Queue (Redis):** A single Redis instance buffers normal incoming logs in a list (`logs_queue`) to prevent OpenSearch bottlenecks during traffic spikes. Security events bypass the queue via a fast-lane path for instant alerting.
+- **Enrichment Engine:** The background worker (`redis_worker`) automatically enriches incoming IP addresses with GeoIP country mapping using `ip-api.com` (free tier) with an in-memory Python dict cache before bulk-inserting into OpenSearch.
 - **Automated Retention (ISM):** The `init_retention.sh` script automatically applies a 7-day deletion policy for disk space management.
 - **Let's Encrypt SSL Prep:** We have prepared `setup_ssl.sh` for easy migration to a real SSL certificate once a domain is registered (e.g., via DuckDNS).
 - **CI/CD Pipeline:** Integrated GitHub Actions workflow for continuous testing of backend components.
@@ -143,9 +143,12 @@ nano .env
 
 Update `.env` with strong credentials:
 ```env
+# OpenSearch Configuration
 OPENSEARCH_URL=https://opensearch:9200
 OPENSEARCH_INITIAL_ADMIN_PASSWORD=YourStrongPassword123!
-SECRET_KEY=change_this_to_a_long_random_string
+
+# Backend FastAPI Configuration
+SECRET_KEY=change_this_to_a_long_secure_random_string_in_production
 INGEST_TOKEN=your_secure_ingest_token
 WEBHOOK_URL=
 API_PORT=8000
@@ -242,8 +245,12 @@ https://log-demo.duckdns.org
 > The browser will warn about the self-signed certificate. Click **Advanced** → **Proceed** to continue.
 
 **Test credentials:**
-- **Admin:** `admin` / `admin123` (can view all tenants)
-- **Viewer:** `viewerA` / `viewer123` (can only view `demoA` data)
+
+| Username | Password | Role | Tenant Access |
+|----------|----------|------|---------------|
+| `admin` | `admin123` | Admin | All tenants |
+| `viewerA` | `viewer123` | Viewer | `demoA` only |
+| `viewerB` | `viewer123` | Viewer | `demoB` only |
 
 **Verify API access:**
 ```bash
